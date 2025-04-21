@@ -10,7 +10,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,7 +37,7 @@ type Configuration struct {
 	LogMaxBackupFiles  uint           // Count of files preserved during rotation
 	LogAllPrinterAttrs bool           // Get *all* printer attrs, for logging
 	ColorConsole       bool           // Enable ANSI colors on console
-	Quirks             QuirksSet      // Device quirks
+	Quirks             QuirksDb       // Quirks data base
 }
 
 // Conf contains a global instance of program configuration
@@ -60,23 +59,15 @@ var Conf = Configuration{
 
 // ConfLoad loads the program configuration
 func ConfLoad() error {
-	// Obtain path to executable directory
-	exepath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("conf: %s", err)
-	}
-
-	exepath = filepath.Dir(exepath)
-
 	// Build list of configuration files
 	files := []string{
 		filepath.Join(PathConfDir, ConfFileName),
-		filepath.Join(exepath, ConfFileName),
+		filepath.Join(PathExecutableDir, ConfFileName),
 	}
 
 	// Load file by file
 	for _, file := range files {
-		err = confLoadInternal(file)
+		err := confLoadInternal(file)
 		if err != nil {
 			return err
 		}
@@ -84,14 +75,13 @@ func ConfLoad() error {
 
 	// Load quirks
 	quirksDirs := []string{
-		PathQuirksDir,
-		PathConfQuirksDir,
-		filepath.Join(exepath, "ipp-usb-quirks"),
+		PathLocalQuirksDir,
+		PathGlobalQuirksDir,
+		filepath.Join(PathExecutableDir, "ipp-usb-quirks"),
 	}
 
-	if err == nil {
-		Conf.Quirks, err = LoadQuirksSet(quirksDirs...)
-	}
+	var err error
+	Conf.Quirks, err = LoadQuirksSet(quirksDirs...)
 
 	return err
 }

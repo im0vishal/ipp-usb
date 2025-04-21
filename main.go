@@ -36,13 +36,14 @@ Options are
 type RunMode int
 
 // Run modes:
-//   RunStandalone - run forever, automatically discover IPP-over-USB
-//                   devices and serve them all
-//   RunUdev       - like RunStandalone, but exit when last IPP-over-USB
-//                   device is disconnected
-//   RunDebug      - logs duplicated on console, -bg option is ignored
-//   RunCheck      - check configuration and exit
-//   RunStatus     - print ipp-usb status and exit
+//
+//	RunStandalone - run forever, automatically discover IPP-over-USB
+//	                devices and serve them all
+//	RunUdev       - like RunStandalone, but exit when last IPP-over-USB
+//	                device is disconnected
+//	RunDebug      - logs duplicated on console, -bg option is ignored
+//	RunCheck      - check configuration and exit
+//	RunStatus     - print ipp-usb status and exit
 const (
 	RunDefault RunMode = iota
 	RunStandalone
@@ -175,6 +176,10 @@ func printStatus() {
 func main() {
 	var err error
 
+	// Initialize paths
+	err = PathsInit()
+	InitLog.Check(err)
+
 	// Parse arguments
 	params := parseArgv()
 
@@ -229,7 +234,7 @@ func main() {
 				fmt.Fprintf(&buf, "%3d. %s", i+1, dev.UsbAddr)
 				if info, err := dev.GetUsbDeviceInfo(); err == nil {
 					fmt.Fprintf(&buf, "  %4.4x:%.4x  %q",
-						info.Vendor, info.Product, info.MfgAndProduct)
+						info.Vendor, info.Product, info.MakeAndModel())
 				}
 
 				InitLog.Info(0, " %s", buf.String())
@@ -262,7 +267,7 @@ func main() {
 
 	// Prevent multiple copies of ipp-usb from being running
 	// in a same time
-	os.MkdirAll(PathLockDir, 0755)
+	MakeParentDirectory(PathLockFile)
 	lock, err := os.OpenFile(PathLockFile,
 		os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	InitLog.Check(err)
